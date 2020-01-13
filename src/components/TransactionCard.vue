@@ -10,6 +10,7 @@ import DateRangePicker from 'src/components/DateRangePicker'
 import SelectNumber from 'src/components/SelectNumber'
 
 import AuthDialogMixin from 'src/mixins/authDialog'
+import StripeMixin from 'src/mixins/stripe'
 
 import {
   convertEndDate
@@ -29,6 +30,7 @@ export default {
   },
   mixins: [
     AuthDialogMixin,
+    StripeMixin,
   ],
   data () {
     return {
@@ -37,6 +39,7 @@ export default {
       confirmDeleteDialogOpened: false,
       showRemoveAssetWillCancelTransactionWarning: false,
       pendingTransactions: [],
+      createdTransaction: null,
     }
   },
   computed: {
@@ -96,6 +99,7 @@ export default {
       'promptTransactionQuantity',
       'validTransactionOptions',
       'maxAvailableQuantity',
+      'paymentActive',
     ]),
   },
   watch: {
@@ -111,9 +115,13 @@ export default {
     }
 
     EventBus.$on('authStatusChanged', (status) => this.onAuthChange(status))
+    EventBus.$on('getStripeCustomerSuccess', () => this.afterGettingStripeCustomer())
+    EventBus.$on('createStripeCheckoutSessionSuccess', (sessionId) => this.afterCreatingStripeCheckoutSession(sessionId))
   },
   beforeDestroy () {
     EventBus.$off('authStatusChanged', (status) => this.onAuthChange(status))
+    EventBus.$off('getStripeCustomerSuccess', () => this.afterGettingStripeCustomer())
+    EventBus.$off('createStripeCheckoutSessionSuccess', (sessionId) => this.afterCreatingStripeCheckoutSession(sessionId))
   },
   methods: {
     selectStartDate (startDate) {
@@ -228,15 +236,35 @@ export default {
 
       const asset = this.activeAsset
 
-      const { message } = await this.$store.dispatch('createTransaction', { asset })
+      const { message, transaction } = await this.$store.dispatch('createTransaction', { asset })
+      this.createdTransaction = transaction
 
-      this.$router.push({
-        name: 'conversation',
-        params: { id: message.conversationId }
+      if (this.stripeActive) {
+        // The process is performed in multiple steps with custom events and Stelace Signal API:
+        // - get the Stripe customer for the current user
+        // - create a checkout session
+        // - redirect to checkout page via stripe.js
+        await this.$store.dispatch('getStripeCustomer')
+      } else {
+        this.$router.push({
+          name: 'conversation',
+          params: { id: message.conversationId }
+        })
+
+        this.resetTransactionParameters()
+        this.$store.dispatch('resetTransactionPreview')
+      }
+    },
+    async afterGettingStripeCustomer () {
+      if (!this.createdTransaction) return
+
+      await this.$store.dispatch('createStripeCheckoutSession', { transactionId: this.createdTransaction.id })
+    },
+    async afterCreatingStripeCheckoutSession (sessionId) {
+      const stripe = await this.loadStripe()
+      await stripe.redirectToCheckout({
+        sessionId
       })
-
-      this.resetTransactionParameters()
-      this.$store.dispatch('resetTransactionPreview')
     },
   }
 }

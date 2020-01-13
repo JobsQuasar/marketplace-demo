@@ -2,12 +2,17 @@ import { values, uniqBy } from 'lodash'
 import stelace, { fetchAllResults } from 'src/utils/stelace'
 import * as types from 'src/store/mutation-types'
 
-export async function createTransaction ({ state, dispatch }, { asset } = {}) {
+import EventBus from 'src/utils/event-bus'
+
+export async function createTransaction ({ state, dispatch, rootGetters }, { asset } = {}) {
   const {
     startDate,
     endDate,
     quantity
   } = state
+  const {
+    stripeActive
+  } = rootGetters
 
   const transactionAttrs = {
     assetId: asset.id
@@ -17,6 +22,8 @@ export async function createTransaction ({ state, dispatch }, { asset } = {}) {
   if (quantity) transactionAttrs.quantity = quantity
 
   let transaction = await stelace.transactions.create(transactionAttrs)
+
+  if (stripeActive) return { transaction }
 
   const message = await stelace.messages.create({
     content: ' ',
@@ -100,4 +107,32 @@ export function resetTransactionPreview ({ commit }) {
     type: types.SET_TRANSACTION_PREVIEW,
     preview: null
   })
+}
+
+export function getStripeCustomer ({ rootGetters }) {
+  const currentUserId = rootGetters.currentUser.id
+
+  return stelace.events.create({
+    type: 'getStripeCustomer',
+    objectId: currentUserId
+  })
+}
+
+/* eslint-disable-next-line camelcase */
+export async function signal_getStripeCustomerSuccess ({ dispatch }) {
+  await dispatch('fetchCurrentUser', { forceRefresh: true })
+
+  EventBus.$emit('getStripeCustomerSuccess')
+}
+
+export function createStripeCheckoutSession ({ rootGetters }, { transactionId }) {
+  return stelace.events.create({
+    type: 'createStripeCheckoutSession',
+    objectId: transactionId
+  })
+}
+
+/* eslint-disable-next-line camelcase */
+export async function signal_createStripeCheckoutSessionSuccess ({ dispatch }, { message }) {
+  EventBus.$emit('createStripeCheckoutSessionSuccess', message.id)
 }

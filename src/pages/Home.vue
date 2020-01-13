@@ -141,7 +141,7 @@ export default {
     selectCategory (category) {
       this.selectedCategory = category
     },
-    handleUrlRedirection (route) {
+    async handleUrlRedirection (route) {
       const routeQuery = route.query
 
       if (routeQuery.redirect) {
