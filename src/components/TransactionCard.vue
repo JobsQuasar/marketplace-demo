@@ -39,7 +39,6 @@ export default {
       confirmDeleteDialogOpened: false,
       showRemoveAssetWillCancelTransactionWarning: false,
       pendingTransactions: [],
-      createdTransaction: null,
     }
   },
   computed: {
@@ -237,14 +236,15 @@ export default {
       const asset = this.activeAsset
 
       const { message, transaction } = await this.$store.dispatch('createTransaction', { asset })
-      this.createdTransaction = transaction
 
       if (this.stripeActive) {
-        // The process is performed in multiple steps with custom events and Stelace Signal API:
-        // - get the Stripe customer for the current user
-        // - create a checkout session
-        // - redirect to checkout page via stripe.js
         await this.$store.dispatch('getStripeCustomer')
+        const sessionId = await this.$store.dispatch('createStripeCheckoutSession', { transactionId: transaction.id })
+
+        const stripe = await this.loadStripe()
+        await stripe.redirectToCheckout({
+          sessionId
+        })
       } else {
         this.$router.push({
           name: 'conversation',
@@ -254,17 +254,6 @@ export default {
         this.resetTransactionParameters()
         this.$store.dispatch('resetTransactionPreview')
       }
-    },
-    async afterGettingStripeCustomer () {
-      if (!this.createdTransaction) return
-
-      await this.$store.dispatch('createStripeCheckoutSession', { transactionId: this.createdTransaction.id })
-    },
-    async afterCreatingStripeCheckoutSession (sessionId) {
-      const stripe = await this.loadStripe()
-      await stripe.redirectToCheckout({
-        sessionId
-      })
     },
   }
 }

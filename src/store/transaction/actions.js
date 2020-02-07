@@ -2,8 +2,6 @@ import { values, uniqBy } from 'lodash'
 import stelace, { fetchAllResults } from 'src/utils/stelace'
 import * as types from 'src/store/mutation-types'
 
-import EventBus from 'src/utils/event-bus'
-
 export async function createTransaction ({ state, dispatch, rootGetters }, { asset } = {}) {
   const {
     startDate,
@@ -109,30 +107,24 @@ export function resetTransactionPreview ({ commit }) {
   })
 }
 
-export function getStripeCustomer ({ rootGetters }) {
+export async function getStripeCustomer ({ dispatch, rootGetters }) {
   const currentUserId = rootGetters.currentUser.id
 
-  return stelace.events.create({
-    type: 'getStripeCustomer',
-    objectId: currentUserId
-  })
-}
+  const url = `${process.env.STELACE_INSTANT_WEBSITE_URL}/.netlify/functions/getStripeCustomer`
 
-/* eslint-disable-next-line camelcase */
-export async function signal_getStripeCustomerSuccess ({ dispatch }) {
+  await stelace.forward.post(url, {
+    userId: currentUserId
+  })
+
   await dispatch('fetchCurrentUser', { forceRefresh: true })
-
-  EventBus.$emit('getStripeCustomerSuccess')
 }
 
-export function createStripeCheckoutSession ({ rootGetters }, { transactionId }) {
-  return stelace.events.create({
-    type: 'createStripeCheckoutSession',
-    objectId: transactionId
+export async function createStripeCheckoutSession ({ rootGetters }, { transactionId }) {
+  const url = `${process.env.STELACE_INSTANT_WEBSITE_URL}/.netlify/functions/createStripeCheckoutSession`
+
+  const { id: sessionId } = await stelace.forward.post(url, {
+    transactionId
   })
-}
 
-/* eslint-disable-next-line camelcase */
-export async function signal_createStripeCheckoutSessionSuccess ({ dispatch }, { message }) {
-  EventBus.$emit('createStripeCheckoutSessionSuccess', message.id)
+  return sessionId
 }
