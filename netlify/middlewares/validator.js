@@ -9,6 +9,9 @@ const defaultJoiOptions = {
 export default function validator (schema, joiOptions) {
   return {
     before: ({ event, callback }, next) => {
+      const { httpMethod } = event
+
+      if (httpMethod === 'OPTIONS') return next()
       if (!schema) return next()
 
       const joiSchema = Joi.object().keys(schema)

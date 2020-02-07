@@ -2,9 +2,10 @@ import createError from 'http-errors'
 import middy from 'middy'
 import Stripe from 'stripe'
 import { get } from 'lodash'
-import { jsonBodyParser, httpErrorHandler } from 'middy/middlewares'
+import { jsonBodyParser, httpErrorHandler, cors } from 'middy/middlewares'
 import { allowHttpMethods, identifyUser, validator } from '../middlewares'
 import { initStelaceSdk } from '../utils/stelace'
+import { stelaceHeaders } from '../utils/cors'
 import Joi from '@hapi/joi'
 
 const jsonHeaders = {
@@ -34,7 +35,10 @@ const stelace = initStelaceSdk({
 const stripe = Stripe(process.env.STRIPE_SECRET_KEY)
 
 const createStripeCheckoutSession = async (event, context, callback) => {
+  const { httpMethod } = event
   const { transactionId } = event.body
+
+  if (httpMethod === 'OPTIONS') return callback(null, { statusCode: 204 })
 
   try {
     if (!context.auth || !context.auth.valid) throw createError(403)
@@ -96,7 +100,8 @@ const createStripeCheckoutSession = async (event, context, callback) => {
 
 export const handler = middy(createStripeCheckoutSession)
   .use(jsonBodyParser())
-  .use(allowHttpMethods('POST'))
+  .use(allowHttpMethods(['POST', 'OPTIONS']))
   .use(validator(schema))
   .use(identifyUser())
   .use(httpErrorHandler())
+  .use(cors({ headers: stelaceHeaders }))
