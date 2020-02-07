@@ -1,9 +1,3 @@
-const allowHttpMethods = require('./allowHttpMethods')
-const identifyUser = require('./identifyUser')
-const validator = require('./validator')
-
-module.exports = {
-  allowHttpMethods,
-  identifyUser,
-  validator
-}
+export { default as allowHttpMethods } from './allowHttpMethods'
+export { default as identifyUser } from './identifyUser'
+export { default as validator } from './validator'

@@ -1,4 +1,4 @@
-const Joi = require('@hapi/joi')
+import Joi from '@hapi/joi'
 
 const defaultJoiOptions = {
   convert: true,
@@ -6,7 +6,7 @@ const defaultJoiOptions = {
   abortEarly: false
 }
 
-module.exports = (schema, joiOptions) => {
+export default function validator (schema, joiOptions) {
   return {
     before: ({ event, callback }, next) => {
       if (!schema) return next()

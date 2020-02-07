@@ -1,4 +1,4 @@
-const { initStelaceSdk } = require('../../scripts/sdk')
+import { initStelaceSdk } from '../utils/stelace'
 
 if (!process.env.STELACE_SECRET_API_KEY) {
   throw new Error('Missing Stelace secret API key')
@@ -9,7 +9,7 @@ const stelace = initStelaceSdk({
   apiBaseURL: process.env.STELACE_API_URL
 })
 
-module.exports = () => {
+export default function identifyUser () {
   return {
     before: async ({ event, context }) => {
       const { authorization } = event.headers

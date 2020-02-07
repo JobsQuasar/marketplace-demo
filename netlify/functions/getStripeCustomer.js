@@ -1,11 +1,11 @@
-const createError = require('http-errors')
-const middy = require('middy')
-const Stripe = require('stripe')
-const { get } = require('lodash')
-const { jsonBodyParser, httpErrorHandler } = require('middy/middlewares')
-const { allowHttpMethods, identifyUser, validator } = require('../middlewares')
-const { initStelaceSdk } = require('../../scripts/sdk')
-const Joi = require('@hapi/joi')
+import createError from 'http-errors'
+import middy from 'middy'
+import Stripe from 'stripe'
+import { get } from 'lodash'
+import { jsonBodyParser, httpErrorHandler } from 'middy/middlewares'
+import { allowHttpMethods, identifyUser, validator } from '../middlewares'
+import { initStelaceSdk } from '../utils/stelace'
+import Joi from '@hapi/joi'
 
 const jsonHeaders = {
   'content-type': 'application/json'
@@ -78,11 +78,9 @@ const getStripeCustomer = async (event, context, callback) => {
   }
 }
 
-const handler = middy(getStripeCustomer)
+export const handler = middy(getStripeCustomer)
   .use(jsonBodyParser())
   .use(allowHttpMethods('POST'))
   .use(validator(schema))
   .use(identifyUser())
   .use(httpErrorHandler())
-
-module.exports = { handler }

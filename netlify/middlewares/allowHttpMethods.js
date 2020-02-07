@@ -1,6 +1,6 @@
-const { flatten } = require('lodash')
+import { flatten } from 'lodash'
 
-module.exports = (httpMethods = []) => {
+export default function allowHttpMethods (httpMethods = []) {
   httpMethods = flatten([httpMethods])
 
   return {
