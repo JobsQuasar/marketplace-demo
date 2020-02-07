@@ -545,6 +545,13 @@ module.exports = function (ctx) {
       // https: true,
       // port: 8080,
       open: false, // opens browser window automatically
+
+      proxy: ctx.dev ? {
+        '/.netlify': {
+          target: 'http://localhost:9000',
+          pathRewrite: { '^/.netlify/functions': '' }
+        }
+      } : undefined
     },
 
     // animations: 'all' --- includes all animations
